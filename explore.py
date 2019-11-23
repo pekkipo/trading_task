@@ -11,10 +11,9 @@ Created on Thu Nov 21 21:02:37 2019
 
 import params
 import pandas as pd
-from utils import list_intersection, list_difference, calculate_intersection_and_differences, fill_instr_types_columns, handle_categorical_types
+from utils import list_intersection, list_difference, calculate_intersection_and_differences, fill_instr_types_columns, handle_categorical_types, create_features_based_on_categories
 import seaborn as sns
 import matplotlib.pyplot as plt
-
 
 
 deposits = pd.read_csv(params.deposits, delimiter=params.delimiter)
@@ -99,6 +98,8 @@ pos_instr_aid = list(positions.instrument_active_id.unique()) # 178
 pos_cl_pl = list(positions.client_platform_id.unique()) #12
 pos_balance_types = list(positions.user_balance_type.unique()) #2
 pos_position_types = list(positions.position_type.unique()) #2
+pos_instrument_dir = list(positions.instrument_dir.unique()) #2
+pos_close_reason = list(positions.close_reason.unique()) #5
 
 #  Drop the duplicates from the dataset.
 print(positions.shape)
@@ -123,6 +124,9 @@ check4 = (positions.made_depo.values == 0).sum()
 # cound how many deals sealed for every user id
 frequency = pd.DataFrame()
 frequency['ids_deals_count'] = positions.groupby('user_id').size()
+"""
+THIS COLUMN WILL HAVE TO BE REMOVED! USED ONLY FOR CHECKING THE NUMBERS
+"""
 
 f_mean=frequency['ids_deals_count'].mean() # 55
 f_med=frequency['ids_deals_count'].median() # 8
@@ -140,12 +144,13 @@ f_max=frequency['ids_deals_count'].max() # 6185
 # I might want to exclude this ID from my dataset cauz it's a bit too extreme
 # and everything that is larger than 99 percentile value
 # though I can study them separately
-# so ids to exclude are: 
-ids_to_exclude = list(frequency['ids_deals_count'].where(frequency['ids_deals_count'] > f_quan99))
+# so 26 ids will be excluded
+frequency_without_outliers = frequency.loc[frequency['ids_deals_count'] <= f_quan99]
 
 """
 Check how many balances each user id has
 """
+# potentially redundant as well
 frequency['ids_balances_count'] = positions.groupby('user_id')['user_balance_id'].nunique()
 # found out that users have only 1 or 2 balances
 # 90% of them have 1 balance
@@ -159,6 +164,7 @@ frequency['ids_client_platform_count'] = positions.groupby('user_id')['client_pl
 """
 Create features for each instrument type True/False
 """
+# this _uses_ feature is also redundant
 list_of_instr_types_per_user = positions.groupby('user_id').instrument_type.unique()
 df_with_instr_types = handle_categorical_types(list_of_instr_types_per_user, pos_instr_types, 'uses_')
 frequency = pd.concat([frequency, df_with_instr_types], axis=1)
@@ -173,7 +179,7 @@ for instr in pos_instr_types:
 """
 Create features for balance_type type True/False
 """
-frequency['ids_balance_types_count'] = positions.groupby('user_id')['user_balance_type'].nunique()
+#frequency['ids_balance_types_count'] = positions.groupby('user_id')['user_balance_type'].nunique() REDUNDANT
 # No need to do this cauz amount of balances would be the same as each balance apparently belongs to a different type
 # instead - make true false vars has_deals_type1 and has_deals_type2
 list_of_balance_types_per_user = positions.groupby('user_id').user_balance_type.unique()
@@ -181,8 +187,10 @@ df_with_balance_types = handle_categorical_types(list_of_balance_types_per_user,
 frequency = pd.concat([frequency, df_with_balance_types], axis=1)
 
 # Calculate amount of deals involving each balance type
-frequency['deals_per_balance_type_1_count'] = (positions.user_balance_type.values == 1).sum()
-frequency['deals_per_balance_type_4_count'] = (positions.user_balance_type.values == 4).sum()
+for balance_type in pos_balance_types: 
+    frequency['deals_per_balance_type_{}_count'.format(balance_type)] = positions.where(positions.user_balance_type == balance_type).groupby('user_id').size()
+    # if the user haven't used certain instrument type the value would be NaN, therefore we replace it with 0
+    frequency['deals_per_balance_type_{}_count'.format(balance_type)].fillna(0, inplace=True)
 
 
 # Maybe should also count how many deals were made with each platform per user?
@@ -191,7 +199,54 @@ frequency['deals_per_balance_type_4_count'] = (positions.user_balance_type.value
 """
 Calculate amount of deals of different position types
 """
+#frequency['ids_position_types_count'] = positions.groupby('user_id')['position_type'].nunique()  REDUNDANT
+list_of_position_types_per_user = positions.groupby('user_id').position_type.unique()
+df_with_position_types = handle_categorical_types(list_of_position_types_per_user, pos_position_types, 'has_position_type_')
+frequency = pd.concat([frequency, df_with_position_types], axis=1)
 
+# Calculate amount of deals involving each balance type
+for position_type in pos_position_types: 
+    frequency['deals_per_position_type_{}_count'.format(position_type)] = positions.where(positions.position_type == position_type).groupby('user_id').size()
+    frequency['deals_per_position_type_{}_count'.format(position_type)].fillna(0, inplace=True)
+
+
+### HAS SMTH FEATURE TYPE IS REDUNDANT AS IT IS ALREADY CONTAINED IN LATER COUNTS
+    ## For now use them to check if the numbers add up
+
+"""
+Calculate amount of deals of different instrument dir types
+"""
+#frequency['ids_different_types_count'] = positions.groupby('user_id')['position_type'].nunique() REDUNDANT
+list_of_instrument_dir_types_per_user = positions.groupby('user_id').instrument_dir.unique()
+df_with_instrument_dir_types = handle_categorical_types(list_of_instrument_dir_types_per_user, pos_instrument_dir, 'has_instr_dir_type_')
+frequency = pd.concat([frequency, df_with_instrument_dir_types], axis=1)
+
+# Calculate amount of deals involving each balance type
+for instr_dir_type in pos_instrument_dir: 
+    frequency['deals_per_instr_dir_type_{}_count'.format(instr_dir_type)] = positions.where(positions.instrument_dir == instr_dir_type).groupby('user_id').size()
+    frequency['deals_per_instr_dir_type_{}_count'.format(instr_dir_type)].fillna(0, inplace=True)
+
+
+"""
+Create features for each client platform
+"""
+# redundant
+list_of_client_platforms_per_user = positions.groupby('user_id').client_platform_id.unique()
+df_with_client_platform_types = handle_categorical_types(list_of_client_platforms_per_user, pos_cl_pl, 'uses_')
+frequency = pd.concat([frequency, df_with_client_platform_types], axis=1)
+
+# Calculate amount of deals involving each client platform
+for cl_pl_id in pos_cl_pl: 
+    frequency['deals_per_client_platform_{}_count'.format(cl_pl_id)] = positions.where(positions.client_platform_id == cl_pl_id).groupby('user_id').size()
+    #(positions.groupby('user_id')['instrument_type']. == instr).sum()
+    # if the user haven't used certain instrument type the value would be NaN, therefore we replace it with 0
+    frequency['deals_per_client_platform_{}_count'.format(cl_pl_id)].fillna(0, inplace=True)
+
+"""
+Create features for each 
+"""
+# try new func here
+frequency = create_features_based_on_categories(positions, frequency, 'close_reason', pos_close_reason, 'is_')
 
 # reset index at the end! and add target column 
 frequency = frequency.reset_index() # this causes problems now

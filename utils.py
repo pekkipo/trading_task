@@ -18,8 +18,48 @@ def handle_categorical_types(df, column_names, col_name_suffix=None):
         resulting_df[col] = resulting_df[col].apply(fill_instr_types_columns, args=([col]))
         # passing a list as a workaround otherwise apply sees each character as a separate argument
         if col_name_suffix:
-            resulting_df.rename(columns={col: col_name_suffix + col}, inplace=True)
+            new_col_name = col_name_suffix + '{}'.format(col)
+            resulting_df.rename(columns={col: new_col_name}, inplace=True)
     return resulting_df
+"""
+def calculate_amount_of_deals(categories)
+for cat in categories: 
+    frequency['deals_per_{}_instr_count'.format(instr)] = positions.where(positions.instrument_type == instr).groupby('user_id').size()
+    #(positions.groupby('user_id')['instrument_type']. == instr).sum()
+    # if the user haven't used certain instrument type the value would be NaN, therefore we replace it with 0
+    frequency['deals_per_{}_instr_count'.format(instr)].fillna(0, inplace=True)
+"""
+
+"""
+Create features for each feature based on its occurence rate
+"""
+def create_features_based_on_categories(source_df, df, feature, list_of_uniques, suffix):
+    """
+    Creates features for each feature based on its occurence rate
+    
+    Parameters: 
+    source_df: Original dataset, in this case positions
+    df: Target dataset
+    feature: column name that is being processed
+    list_of_uniques: list of all the values that occure in this column
+    suffix: string suffix that will be a part of the new feature names
+  
+    Returns: 
+    df: target dataset with added features
+    """
+    list_of_types_per_user = source_df.groupby('user_id')[feature].unique()
+    df_with_types = handle_categorical_types(list_of_types_per_user, list_of_uniques, suffix)
+    df = pd.concat([df, df_with_types], axis=1)
+    
+    # Calculate amount of deals involving each instrument type
+    for one_type in list_of_uniques: 
+        df['{}_{}_count'.format(feature, one_type)] = source_df.where(source_df[feature] == one_type).groupby('user_id').size()
+        #(positions.groupby('user_id')['instrument_type']. == instr).sum()
+        # if the user haven't used certain instrument type the value would be NaN, therefore we replace it with 0
+        df['{}_{}_count'.format(feature, one_type)].fillna(0, inplace=True)
+       
+    return df
+
 
 # Intersections
 def list_intersection(a, b):
