@@ -100,6 +100,7 @@ pos_balance_types = list(positions.user_balance_type.unique()) #2
 pos_position_types = list(positions.position_type.unique()) #2
 pos_instrument_dir = list(positions.instrument_dir.unique()) #2
 pos_close_reason = list(positions.close_reason.unique()) #5
+pos_leverage = list(positions.leverage.unique()) #16
 
 #  Drop the duplicates from the dataset.
 print(positions.shape)
@@ -164,7 +165,7 @@ frequency['ids_client_platform_count'] = positions.groupby('user_id')['client_pl
 """
 Create features for each instrument type True/False
 """
-# this _uses_ feature is also redundant
+# this _uses_ feature is also redundant. Or actually not, I ll keep it
 list_of_instr_types_per_user = positions.groupby('user_id').instrument_type.unique()
 df_with_instr_types = handle_categorical_types(list_of_instr_types_per_user, pos_instr_types, 'uses_')
 frequency = pd.concat([frequency, df_with_instr_types], axis=1)
@@ -243,10 +244,26 @@ for cl_pl_id in pos_cl_pl:
     frequency['deals_per_client_platform_{}_count'.format(cl_pl_id)].fillna(0, inplace=True)
 
 """
-Create features for each 
+Create features for close_reason
 """
 # try new func here
 frequency = create_features_based_on_categories(positions, frequency, 'close_reason', pos_close_reason, 'is_')
+
+"""
+Create features for instrument_underlying
+"""
+frequency = create_features_based_on_categories(positions, frequency, 'instrument_underlying', pos_instr_under, 'uses_')
+
+"""
+Create features for instrument_active_id
+"""
+frequency = create_features_based_on_categories(positions, frequency, 'instrument_active_id', pos_instr_aid, 'uses_')
+
+"""
+Create features for leverage (It seems to be seme categories, so I ll treat that feature accordingly)
+"""
+frequency = create_features_based_on_categories(positions, frequency, 'leverage', pos_leverage, 'uses_')
+
 
 # reset index at the end! and add target column 
 frequency = frequency.reset_index() # this causes problems now

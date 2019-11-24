@@ -48,9 +48,12 @@ def create_features_based_on_categories(source_df, df, feature, list_of_uniques,
     Returns: 
     df: target dataset with added features
     """
+    """ Removed this part as this when I do the counting of values further in this function for each type - the info about using this
+    type is already encoded. If count is zero - obviously it is not used
     list_of_types_per_user = source_df.groupby('user_id')[feature].unique()
     df_with_types = handle_categorical_types(list_of_types_per_user, list_of_uniques, suffix)
     df = pd.concat([df, df_with_types], axis=1)
+    """
     
     # Calculate amount of deals involving each instrument type
     for one_type in list_of_uniques: 
@@ -64,10 +67,16 @@ def create_features_based_on_categories(source_df, df, feature, list_of_uniques,
 
 # These funcs are used cauz I need to pass % parameter to agg quantile func
 def q10(x):
-            return x.quantile(0.1)
+    return x.quantile(0.1)
 # 90th Percentile
 def q90(x):
-            return x.quantile(0.9)
+    return x.quantile(0.9)
+        
+def q25(x):
+    return x.quantile(0.25)
+
+def q75(x):
+    return x.quantile(0.75)
         
     
 def check_currency_conversions(df, features):
