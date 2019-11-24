@@ -278,6 +278,7 @@ def handle_column(df,col, func):
 
 positions.user_balance_type = handle_column(positions, 'user_balance_type', handle_user_balance_type)
 positions.client_platform_id = handle_column(positions, 'client_platform_id', handle_numeric_category)
+positions.instrument_active_id = handle_column(positions, 'instrument_active_id', handle_numeric_category)   
 positions.instrument_active_id = handle_column(positions, 'instrument_active_id', handle_numeric_category)    
 
 
@@ -300,13 +301,13 @@ make a depo and negative values implies the opposite
 def show_distributions(df, categorical_vars):
     for col in categorical_vars:
         plt.figure(figsize=(20,10))
-        #Returns counts of unique values for each outcome for each feature
+        # Returns counts of unique values for each outcome for each feature
         pos_counts = df.loc[df.made_depo.values == 1, col].value_counts() 
         neg_counts = df.loc[df.made_depo.values == 0, col].value_counts()
         
         all_counts = list(set(list(pos_counts.index) + list(neg_counts.index)))
         
-        #Counts of how often each outcome was recorded.
+        # Counts of how often each outcome was recorded.
         freq_pos = (df.made_depo.values == 1).sum()
         freq_neg = (df.made_depo.values == 0).sum()
         

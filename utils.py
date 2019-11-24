@@ -6,6 +6,7 @@ Created on Fri Nov 22 13:55:44 2019
 """
 
 import pandas as pd
+import numpy as np
 
 def fill_instr_types_columns(vals, col_name): 
     return 1 if col_name in vals else 0
@@ -60,6 +61,27 @@ def create_features_based_on_categories(source_df, df, feature, list_of_uniques,
        
     return df
 
+
+# These funcs are used cauz I need to pass % parameter to agg quantile func
+def q10(x):
+            return x.quantile(0.1)
+# 90th Percentile
+def q90(x):
+            return x.quantile(0.9)
+        
+    
+def check_currency_conversions(df, features):
+    
+    for feature in features:
+        # Column that is a result of subtraction a "enrolled" version from the feature
+        df['difference'] = df[feature] - df[feature + '_enrolled']
+        
+        # If the difference is not zero then - conversion happened (1) otherwise not (0)
+        df['{}_conversion_happened'.format(feature)] = np.where(df['difference'] == 0, 0, 1)
+        
+        df.drop(columns=['difference'], inplace=True)
+    
+    return df
 
 # Intersections
 def list_intersection(a, b):
