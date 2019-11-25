@@ -30,8 +30,8 @@ events = pd.read_csv(params.events, delimiter=params.delimiter)
 # Получим все айди из каждого датасета
 dep_ids = list(deposits.user_id.unique()) # 212
 pos_ids = list(positions.user_id.unique()) # 2556
-ev_ids = list(events.user_id.unique()) # 299 I ll have to go with just true or false event feature
-apf_ids = list(appsflyer.user_id.unique()) # 4991 какого хрена так много
+ev_ids = list(events.user_id.unique()) # 299
+apf_ids = list(appsflyer.user_id.unique()) # 4991
 
 #inter_dict = calculate_intersection_and_differences(pos_ids, dep_ids, ev_ids, apf_ids)
 

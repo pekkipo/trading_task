@@ -65,6 +65,30 @@ def create_features_based_on_categories(source_df, df, feature, list_of_uniques,
        
     return df
 
+"""
+Creates features like "uses_platform_x" True of False
+"""
+def create_features_for_appflyer(source_df, df, feature, list_of_uniques, suffix="_"):
+    """
+    Creates features for each feature based on its occurence rate
+    
+    Parameters: 
+    source_df: Original dataset, in this case positions
+    df: Target dataset
+    feature: column name that is being processed
+    list_of_uniques: list of all the values that occure in this column
+    suffix: string suffix that will be a part of the new feature names
+  
+    Returns: 
+    df: target dataset with added features
+    """
+    
+    list_of_types_per_user = source_df.groupby('user_id')[feature].unique()
+    df_with_types = handle_categorical_types(list_of_types_per_user, list_of_uniques, suffix)
+    df = pd.concat([df, df_with_types], axis=1)
+   
+    return df
+
 
 def handle_json_dict(data):
     d = json.loads(data)

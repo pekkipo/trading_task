@@ -157,6 +157,13 @@ events_stats = create_features_based_on_categories(events, events_stats, 'catego
 
 
 """
+Create features for names
+"""
+events_stats = create_features_based_on_categories(events, events_stats, 'name', events_names)
+
+
+
+"""
 HANDLE NUMERICAL FEATURES
 """
 """

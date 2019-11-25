@@ -12,5 +12,4 @@ appsflyer = 'data/ds_appsflyer.csv'
 
 delimiter = '\t'
 
-# Включает некоторые текстовые логи
-test_mode = True
+read_prepared_data = True
