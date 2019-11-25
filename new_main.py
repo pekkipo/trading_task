@@ -19,7 +19,6 @@ from process_appsflyer import process_appsflyer_dataset
 from process_positions import process_positions_dataset
 from process_events import process_events_dataset
 from utils import calculate_intersection_and_differences
-from sklearn.metrics import roc_auc_score
 
 
 # Read original datasets
@@ -81,20 +80,67 @@ check_1 = (merged_dataset.target.values == 1).sum()
 check_0 = (merged_dataset.target.values == 0).sum()
 
 
-X = np.array(merged_dataset.drop(['target'], axis=1))
+## Some ids have signifficantly more records in positions than others
+## and can be considered outliers. 26 of these were found in one of the exploration file and
+## saved into a list. 
+## Removing them actually doesn't influence the result that much so I will keep these records
+#outliers_ids = load('outliers_ids.joblib')
+#merged_dataset = merged_dataset[~merged_dataset.user_id.isin(outliers_ids)]
+#print(merged_dataset.shape)
+
+
+X = np.array(merged_dataset.drop(['target', 'user_id'], axis=1))
 y = merged_dataset['target'].values
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state = 42)
 
+"""
+Some convenience funcs
+"""
 # I use ROC AUC curve metrics as the dataset is imbalanced, 202 - 1 against 2354 - 0
 def evaluate(model, model_name, X_text, y_test):
+    """
+    Shows AUC score
+    
+    """
     predictions = model.predict(X_test)
     model_auc = round(roc_auc_score(y_test, predictions), 4)
     print('\n{} VAL AUC: {}'.format(model_name, model_auc))  
     return model_auc
 
-# %% Random forest with scikit random search
+def plotImp(impts, X, num = 20, name="feats_importance"):
+    """
+    Plots importance of features
+    
+    parameters:
+        num: number of features to display
+        impts: list of feature importance values
+        name: name for the plot
+    """
+    feature_imp = pd.DataFrame({'Value':impts,'Feature': X.columns})
+    plt.figure(figsize=(40, 20))
+    sns.set(font_scale = 3)
+    sns.barplot(x="Value", y="Feature", data=feature_imp.sort_values(by="Value", 
+                                                        ascending=False)[0:num])
+    
+    
+    plt.title('Features importances')
+    plt.tight_layout()
+    plt.savefig('{}.png'.format(name))
+    plt.show()
+    
 
+
+# %% Simple decision tree. AUC = 0.8544
+# Use it for features importance graph
+from sklearn.tree import DecisionTreeClassifier    
+dt = DecisionTreeClassifier().fit(X_train, y_train)
+imps_dt = dt.feature_importances_
+print(sorted(imps_dt)) # plot them later
+dt_auc = evaluate(dt, 'Decision Tree', X_test, y_test)
+
+# %% Random forest with scikit random search
+# Takes too long, didn't use it
 from sklearn.ensemble import RandomForestRegressor
 rf = RandomForestRegressor(random_state = 42)
 
@@ -120,17 +166,17 @@ random_grid = {'n_estimators': n_estimators,
 # Search for best hyperparameters
 
 rf = RandomForestRegressor() # base model to be tuned
-# Random search of parameters, using 5 fold cross validation, 
+# Random search of parameters, 3 fold cross validation, 
 # Search across 100 different combinations, and use all available cores
-rf_random = RandomizedSearchCV(estimator = rf, param_distributions = random_grid, n_iter = 100, cv = 5, verbose=2, random_state=42, n_jobs = -1)
-rf_random.fit(X_train, y_train)
+rf_random = RandomizedSearchCV(estimator = rf, param_distributions = random_grid, n_iter = 100, cv = 3, verbose=2, random_state=42, n_jobs = -1)
 
-best_random_rf = rf_random.best_estimator_
-random_auc = evaluate(best_random_rf, 'Random Forest', X_test, y_test)
+#rf_random.fit(X_train, y_train)
+#best_random_rf = rf_random.best_estimator_
+#random_auc = evaluate(best_random_rf, 'Random Forest', X_test, y_test)
+#dump(best_random_rf, 'rf_model.joblib')
 
-dump(best_random_rf, 'rf_model.joblib')
-    
 # %% LGBM with GridSearch. Will give the feature importance graph
+# Training auc 0.97, test auc 0.94
 params = {
     'application': 'binary',
     'boosting': 'gbdt',
@@ -138,7 +184,7 @@ params = {
     'learning_rate': 0.05,
     'num_leaves': 62,
     'max_depth': -1, 
-    'max_bin': 510, -
+    'max_bin': 510,
     'lambda_l1': 5, 
     'lambda_l2': 10,
     'metric' : 'auc', 
@@ -211,19 +257,21 @@ lgb_model = lgb.train(params, train_set=d_train, num_boost_round=1000, valid_set
 
 lbgm_auc = evaluate(lgb_model, 'LGBM', X_test, y_test)
 
-dump(lgb_model, 'lgbm_model.joblib')
-
-feature_imp = pd.DataFrame(sorted(zip(lgb_model.feature_importances_,X.columns)), columns=['Value','Feature'])
-
-plt.figure(figsize=(20, 10))
-sns.barplot(x="Value", y="Feature", data=feature_imp.sort_values(by="Value", ascending=False))
-plt.title('LightGBM Features')
-plt.tight_layout()
-plt.show()
-plt.savefig('lgbm_importances.png')
+dump(lgb_model, 'lgbm_model2.joblib')
 
 print("Done")
 
+# %% Load mode and show feature importance
+lgbm_model = load('lgbm_model2.joblib')
+ds = load('data/merged_dataset.joblib')
+ds.drop(['target', 'user_id'], axis=1, inplace = True)
 
+"""
+lgbm_importance = lgbm_model.feature_importance()
+plotImp(lgbm_importance, ds, num = 50, name = "lgbm_importance")
+"""
+
+plotImp(imps_dt, ds, 50, "dt_importance")
+                     
 
 

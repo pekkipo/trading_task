@@ -16,6 +16,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.pyplot as plt
 import seaborn as sns
+from joblib import dump
 
 
 deposits = pd.read_csv(params.deposits, delimiter=params.delimiter)
@@ -149,6 +150,24 @@ f_max=frequency['ids_deals_count'].max() # 6185
 # though I can study them separately
 # so 26 ids will be excluded
 frequency_without_outliers = frequency.loc[frequency['ids_deals_count'] <= f_quan99]
+
+
+fr_ds = frequency.reset_index()
+fr_ex_ds = frequency_without_outliers.reset_index()
+"""
+fr = list(fr_ds.ids_deals_count.unique())
+fr_ex = list(fr_ex_ds.ids_deals_count.unique())
+"""
+ids_remove = list_difference(fr, fr_ex)
+
+diff_df = pd.merge(fr_ds, fr_ex_ds, how='outer', indicator='Exist')
+
+diff_df = diff_df.loc[diff_df['Exist'] != 'both']
+diff_df = diff_df['user_id']
+diff_df = list(diff_df)
+dump(diff_df, 'outliers_ids.joblib')
+
+print("Done")
 
 """
 Check how many balances each user id has
