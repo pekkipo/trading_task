@@ -7,10 +7,8 @@ Created on Mon Nov 25 20:36:32 2019
 
 from data_utils import merge_created_datasets, prepare_dataset_for_training, trim_dataset_with_relevant_features
 from feature_selection import rfe_selection, pierson_correlation, load_optimal_features
-import matplotlib.pyplot as plt
-import seaborn as sns
 from joblib import load, dump
-from sklearn.model_selection import train_test_split, GridSearchCV, RandomizedSearchCV
+from sklearn.model_selection import train_test_split, GridSearchCV
 import utils
 from sklearn.tree import DecisionTreeClassifier    
 import lightgbm as lgb
@@ -21,24 +19,27 @@ dataset = merge_created_datasets()
 
 # load selected features
 # Choose one of those
-features_active = load_optimal_features('rfe')
-#features_active = load_optimal_features('piers')
+feats_choice = 'rfe' # or 'piers'
+features_active = load_optimal_features(feats_choice)
 
 # Add some features from my previous observations
 features_active.extend(['deals_per_balance_type_1_count', 'instrument_strike_sum_balance_type_1',
                     'ids_events_count', 'instrument_strike_q75', 'deals_per_position_type_long_count'])
 
+# Keep only relevant features
 dataset = trim_dataset_with_relevant_features(dataset, features_active)
+
+# Adjust dataset for training
 X, y = prepare_dataset_for_training(dataset)
 
 # %% Feature selection
-# This is needed if no features were created previously and saved in feats folder
+# This is needed if no features were previously created and saved in feats folder7
+# Choose one
 #feats_rfe = rfe_selection(dataset, X, y)
-# Check correlation among features already chosen with rfe 
 #feats_piers = pierson_correlation(dataset)
 
 # Var needed just for model and plots names
-feats_choice = 'rfe'
+
 
 # %% Training and prediction Decision Trees
 
@@ -56,8 +57,10 @@ dt_auc = utils.evaluate(dt, 'Decision Trees' + feats_choice, X_test, y_test)
 
 
 # %% Training and prediction LGBM
+
 # LGBM with GridSearch
-# Training auc 0.97, test auc 0.94
+# With features chosen by rfe: VAL AUC: test 0.9686 train: 0.982342 valid: 0.950993
+
 params = {
     'application': 'binary',
     'boosting': 'gbdt',
@@ -135,8 +138,8 @@ lbgm_auc = utils.evaluate(lgb_model, 'LGBM'+ feats_choice, X_test, y_test)
 dump(lgb_model, 'models/lgbm_model_{}.joblib'.format(feats_choice))
 
 
-# %% Feature importance
-# %% Load mode and show feature importance
+# %% Feature importance plots
+
 ds = dataset.drop(['target', 'user_id'], axis=1)
 lgbm_importance = lgb_model.feature_importance()
 utils.plotImp(lgbm_importance, ds, 20, "lgbm_importance_{}".format(feats_choice))

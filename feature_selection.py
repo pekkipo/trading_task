@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from joblib import load, dump
 from sklearn.tree import DecisionTreeClassifier  
+from sklearn.svm import SVR
 from sklearn.feature_selection import RFE
 from sklearn.model_selection import train_test_split
 import numpy as np
@@ -47,8 +48,9 @@ def rfe_selection(df, X, y, max_feats=60, save=True, drop_cols=['target', 'user_
         score_list =[]
         for n in range(len(nof_list)):
             X_train, X_test, y_train, y_test = train_test_split(X,y, test_size = 0.3, random_state = 0)
-            model = DecisionTreeClassifier()
-            rfe = RFE(model,nof_list[n])
+            model = DecisionTreeClassifier() 
+            #model = SVR(kernel="linear")      can try svm  
+            rfe = RFE(model, nof_list[n])
             X_train_rfe = rfe.fit_transform(X_train,y_train)
             X_test_rfe = rfe.transform(X_test)
             model.fit(X_train_rfe,y_train)
