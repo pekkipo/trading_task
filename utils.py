@@ -8,6 +8,45 @@ Created on Fri Nov 22 13:55:44 2019
 import pandas as pd
 import numpy as np
 import json
+from sklearn.metrics import roc_auc_score
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+"""
+Some convenience funcs
+"""
+# I use ROC AUC curve metrics as the dataset is imbalanced, 202 - 1 against 2354 - 0
+def evaluate(model, model_name, X_test, y_test):
+    """
+    Shows AUC score
+    
+    """
+    predictions = model.predict(X_test)
+    model_auc = round(roc_auc_score(y_test, predictions), 4)
+    print('\n{} VAL AUC: {}'.format(model_name, model_auc))  
+    return model_auc
+
+def plotImp(impts, X, num = 20, name="feats_importance"):
+    """
+    Plots importance of features
+    
+    parameters:
+        num: number of features to display
+        impts: list of feature importance values
+        name: name for the plot
+    """
+    feature_imp = pd.DataFrame({'Value':impts,'Feature': X.columns})
+    plt.figure(figsize=(40, 20))
+    sns.set(font_scale = 3)
+    sns.barplot(x="Value", y="Feature", data=feature_imp.sort_values(by="Value", 
+                                                        ascending=False)[0:num])
+    
+    
+    plt.title('Features importances')
+    plt.tight_layout()
+    plt.savefig('{}.png'.format(name))
+    plt.show()
+    
 
 def fill_instr_types_columns(vals, col_name): 
     return 1 if col_name in vals else 0

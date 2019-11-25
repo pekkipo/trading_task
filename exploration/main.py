@@ -89,6 +89,22 @@ check_0 = (merged_dataset.target.values == 0).sum()
 #print(merged_dataset.shape)
 
 
+# Try removing top feats 
+"""
+freats_to_remove = ['open_underlying_price_sum_balance_type_1', 
+                    'duration_mean',
+                    'close_underlying_price_sum_balance_type_1',
+                    'sell_amount_mean',
+                    'name_get-first-candles_count']
+"""
+
+feats_to_keep = load("top_N_feats_dt.joblib")
+feats_to_keep = feats_to_keep[:40]
+feats_to_keep.extend(["target", "user_id"])
+
+#merged_dataset.drop(columns=freats_to_remove, inplace = True)
+merged_dataset = merged_dataset[feats_to_keep]
+
 X = np.array(merged_dataset.drop(['target', 'user_id'], axis=1))
 y = merged_dataset['target'].values
 
@@ -134,10 +150,66 @@ def plotImp(impts, X, num = 20, name="feats_importance"):
 # %% Simple decision tree. AUC = 0.8544
 # Use it for features importance graph
 from sklearn.tree import DecisionTreeClassifier    
-dt = DecisionTreeClassifier().fit(X_train, y_train)
+from sklearn.feature_selection import RFE
+
+dt = DecisionTreeClassifier()
+dt.fit(X_train, y_train)
+dump(dt, 'dt_model_50.joblib')
+
 imps_dt = dt.feature_importances_
 print(sorted(imps_dt)) # plot them later
 dt_auc = evaluate(dt, 'Decision Tree', X_test, y_test)
+
+
+
+ds = merged_dataset.drop(['target', 'user_id'], axis=1)
+plotImp(imps_dt, ds, 50, "dt_importance_50")
+
+
+"""
+rfe = RFE(estimator=dt, n_features_to_select=50, step=1)
+dt_fit = rfe.fit(X_train, y_train)
+dump(rfe, 'rfe_model.joblib')
+dump(dt, 'dt_model.joblib')
+ranks = rfe.ranking_
+# print summaries for the selection of attributes
+print(rfe.support_)
+print(rfe.ranking_)
+# Plot pixel ranking
+
+plt.matshow(rfe.ranking_, cmap=plt.cm.Blues)
+plt.colorbar()
+plt.title("Ranking of pixels with RFE")
+plt.show()
+
+
+feats = dt_fit.n_features_
+sups = dt_fit.support_
+rank = dt_fit.ranking_
+print("Num Features: %s" % (dt_fit.n_features_))
+print("Selected Features: %s" % (dt_fit.support_))
+print("Feature Ranking: %s" % (dt_fit.ranking_))
+ds = merged_dataset.drop(['target', 'user_id'], axis=1)
+#sups = list(sups*1)
+sups = list(sups)
+
+from itertools import compress
+list_a = list(ds.columns) 
+features_to_keep = list(compress(list_a, sups))
+dump(features_to_keep, "top_N_feats_dt.joblib")
+
+
+ds_new = ds.drop(features_to_keep, axis=1)
+"""
+    
+"""
+imps_dt = dt.feature_importances_
+print(sorted(imps_dt)) # plot them later
+dt_auc = evaluate(dt, 'Decision Tree', X_test, y_test)
+
+#ds = merged_dataset.drop(['target', 'user_id'], axis=1)
+plotImp(imps_dt, ds, 50, "dt_importance")
+"""
 
 # %% Random forest with scikit random search
 # Takes too long, didn't use it
@@ -257,21 +329,22 @@ lgb_model = lgb.train(params, train_set=d_train, num_boost_round=1000, valid_set
 
 lbgm_auc = evaluate(lgb_model, 'LGBM', X_test, y_test)
 
-dump(lgb_model, 'lgbm_model2.joblib')
+dump(lgb_model, 'lgbm_model_50.joblib')
 
 print("Done")
 
 # %% Load mode and show feature importance
 lgbm_model = load('lgbm_model2.joblib')
-ds = load('data/merged_dataset.joblib')
-ds.drop(['target', 'user_id'], axis=1, inplace = True)
+#ds = load('data/merged_dataset.joblib')
+#ds = merged_dataset.drop(columns=freats_to_remove)
 
-"""
+ds = merged_dataset.drop(['target', 'user_id'], axis=1)
+
 lgbm_importance = lgbm_model.feature_importance()
-plotImp(lgbm_importance, ds, num = 50, name = "lgbm_importance")
-"""
+plotImp(lgbm_importance, ds, 10, "lgbm_importance")
 
-plotImp(imps_dt, ds, 50, "dt_importance")
+
+plotImp(imps_dt, ds, 42, "dt_importance")
                      
 
 
