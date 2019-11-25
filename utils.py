@@ -7,6 +7,7 @@ Created on Fri Nov 22 13:55:44 2019
 
 import pandas as pd
 import numpy as np
+import json
 
 def fill_instr_types_columns(vals, col_name): 
     return 1 if col_name in vals else 0
@@ -34,7 +35,7 @@ for cat in categories:
 """
 Create features for each feature based on its occurence rate
 """
-def create_features_based_on_categories(source_df, df, feature, list_of_uniques, suffix):
+def create_features_based_on_categories(source_df, df, feature, list_of_uniques, suffix="_"):
     """
     Creates features for each feature based on its occurence rate
     
@@ -64,6 +65,14 @@ def create_features_based_on_categories(source_df, df, feature, list_of_uniques,
        
     return df
 
+
+def handle_json_dict(data):
+    d = json.loads(data)
+    return d
+    
+
+def check_if_nested(parameters_dict):
+    return any(isinstance(i, dict) for i in parameters_dict.values())
 
 # These funcs are used cauz I need to pass % parameter to agg quantile func
 def q10(x):

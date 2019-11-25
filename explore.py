@@ -14,6 +14,8 @@ import pandas as pd
 from utils import list_intersection, list_difference, calculate_intersection_and_differences, fill_instr_types_columns, handle_categorical_types, create_features_based_on_categories
 import seaborn as sns
 import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 
 deposits = pd.read_csv(params.deposits, delimiter=params.delimiter)
